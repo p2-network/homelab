@@ -1,0 +1,50 @@
+version: "3.3"
+
+services:
+  ytdl:
+    image: tzahi12345/youtubedl-material:4.3
+    restart: unless-stopped
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.youtubedl.rule=Host(`ytdl.p2.network`)'
+      - 'traefik.http.routers.youtubedl.entrypoints=web'
+      - "traefik.http.routers.youtubedl.middlewares=cf-connecting-ip@file,youtubedl-auth@docker"
+      - "traefik.http.middlewares.youtubedl-auth.forwardauth.address=http://traefik-auth-cloudflare:8080/auth/89cd7a64eefb09187f4b51a4cbbf08639d80df055de4208931d36ce25747924a"
+      - "traefik.http.middlewares.youtubedl-auth.forwardauth.authResponseHeaders=X-Auth-User"
+      - flame.type=application
+      - flame.name=ytdl
+      - flame.url=https://ytdl.p2.network/
+      - flame.icon=tune-vertical
+    environment:
+      - ALLOW_CONFIG_MUTATIONS=true
+      - ytdl_mongodb_connection_string=mongodb://db:27017
+      - ytdl_use_local_db=false
+      - write_ytdl_config=true
+    depends_on:
+      - db
+    volumes:
+      - /homelab/ytdl/appdata:/app/appdata
+      - /homelab/ytdl/audio:/app/audio
+      - /homelab/ytdl/video:/app/video
+      - /homelab/ytdl/subscriptions:/app/subscriptions
+      - /homelab/ytdl/users:/app/users
+    ports:
+      - "8998:17442"
+    networks:
+      default:
+      traefik:
+
+  db:
+    image: mongo
+    container_name: mongo-db
+    restart: always
+    volumes:
+      - /homelab/ytdl/db:/data/db
+    networks:
+      default:
+
+
+networks:
+  traefik:
+    name: traefik_default
+    external: true
